@@ -17,6 +17,9 @@ export default class Level extends Scene{
     /**@type {Phaser.Physics.Arcade.Group} */
     carrots;
 
+    points = 0;
+    /**@type {Phaser.GameObjects.Text} */
+    pointsText;
 
     constructor(){
         super('level');
@@ -26,8 +29,11 @@ export default class Level extends Scene{
         this.load.image('background', 'assets/bg_layer1.png');
         this.load.image('platform', 'assets/ground_grass.png');
         this.load.image('bunny-stand', 'assets/bunny1_stand.png');
+        this.load.image('bunny-jump', 'assets/bunny1_jump.png');
+
         this.load.image('carrot', 'assets/carrot.png');
         this.load.audio('jump', 'assets/sfx/jump.ogg');
+        this.load.audio('gameover', 'assets/sfx/gameover.ogg');
     }
 
     create(){
@@ -90,7 +96,15 @@ export default class Level extends Scene{
         this.physics.add.overlap(this.player, this.carrots, this.handleCollectCarrot, undefined, this);
 
 
-        
+        //TEXTO DE PONTUAÇÃO
+        const style = { color: '#000', frontSize: 24};
+        this.pointsText = this.add.text(240, 10, 'Cenouras: 0', style);
+        this.pointsText.setScrollFactor(0);
+        this.pointsText.setOrigin(0.5, 0);
+
+
+        let rect = this.add.rectangle(240,300,100,50,0xffcc00);
+
 
     }
 
@@ -102,8 +116,16 @@ export default class Level extends Scene{
         if ( touchingGround){
             this.player.setVelocityY(-300);
             this.sound.play('jump');
+
+
+            //MUDA A IMAGEM DO COELHO
+            this.player.setTexture('bunny-jump');
         }
 
+        let velocityY = this.player.body.velocity.y;
+        if (velocityY > 0 && this.player.texture.key != 'bunny-stand'){
+            this.player.setTexture('bunny-stand');
+        }
 
 
         //REUSANDO AS PLATAFORMAS
@@ -139,6 +161,14 @@ export default class Level extends Scene{
             this.player.setVelocityX(0);
         }
 
+
+        //Testando se o coelho caiu
+        let bottomPlatform = this.findBottomPlatform();
+        if (this.player.y > bottomPlatform.y + 200){
+            this.scene.start('game-over');
+            this.sound.play('gameover');
+        }
+
     }
 
 
@@ -160,6 +190,26 @@ export default class Level extends Scene{
     handleCollectCarrot(player, carrot){
         this.carrots.killAndHide(carrot);
         this.physics.world.disableBody(carrot.body);
+        this.points++;
+        this.pointsText.text = 'Cenouras: ' + this.points;
     }
+
+
+    findBottomPlatform(){
+        let platforms = this.platforms.getChildren();
+        let bottomPlatform = platforms[0];
+
+        for(let i = 1; i < platforms.length; i++){
+            let platform = platforms[i];
+
+            if(platform.y < bottomPlatform.y){
+                continue;
+            }
+            bottomPlatform = platform;
+        }
+
+        return bottomPlatform;
+    }
+
 
 }
